@@ -1,10 +1,23 @@
+import argparse
 from pathlib import Path
 
 import pandas as pd
 
 
-def check_raw_data():
-    file_path = Path("data/raw/katowice_zawodzie_history.parquet")
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Check raw data quality")
+    parser.add_argument(
+        "--input",
+        type=str,
+        default="data/raw/katowice.parquet",
+        help="Input parquet path",
+    )
+    return parser.parse_args()
+
+
+def check_raw_data() -> None:
+    args = _parse_args()
+    file_path = Path(args.input)
 
     if not file_path.exists():
         print(f"❌ File {file_path} not found!")

@@ -7,6 +7,10 @@ setup:
 fetch days="7":
     uv run fetch-data --days-back {{days}} --output data/raw/katowice.parquet
 
+# Run data quality check
+quality:
+    uv run check-quality
+
 # Run Ruff linter with autofix
 lint:
     uv tool run ruff check . --fix
