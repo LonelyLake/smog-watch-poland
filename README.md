@@ -27,4 +27,5 @@ store them in Parquet, and run a basic data quality check.
 
 	just setup
 	just fetch 14
+    just quality
 	just lint
