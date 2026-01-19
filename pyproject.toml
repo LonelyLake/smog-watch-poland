@@ -10,11 +10,25 @@ dependencies = [
     "numpy>=2.4.1",
     "pandas>=2.3.3",
     "pyarrow>=23.0.0",
+    "python-dotenv>=1.2.1",
     "requests>=2.32.5",
     "ruff>=0.14.13",
     "scikit-learn>=1.8.0",
     "seaborn>=0.13.2",
 ]
+[project.scripts]
+fetch-data = "data.fetch_data:main"
+check-quality = "data.check_quality:check_raw_data"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
 [tool.ruff]
 line-length = 88
 select = ["E", "F", "I"]
