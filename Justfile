@@ -5,7 +5,7 @@ setup:
 # Fetch data for Katowice (Zawodzie)
 # Usage: just fetch 14
 fetch days="7":
-    uv run fetch-data --days-back {{days}} --output data/raw/katowice.parquet
+    uv run fetch-data --days {{days}} --output data/raw/katowice.parquet
 
 # Run data quality check
 quality:
