@@ -1,87 +1,64 @@
 import argparse
 import logging
 import sys
-from pathlib import Path
 
 import pandas as pd
 
-# Setting up logging
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-logger = logging.getLogger(__name__)
 
 
-def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Raw data quality validation")
-    parser.add_argument(
-        "--input",
-        type=str,
-        default="data/raw/katowice.parquet",
-        help="Path to the input parquet file",
-    )
-    parser.add_argument(
-        "--output-clean",
-        type=str,
-        default="data/processed/katowice_clean.parquet",
-        help="Path to save cleaned data",
-    )
-    return parser.parse_args()
+def check_raw_data(input_path: str) -> None:
+    try:
+        df = pd.read_parquet(input_path)
+    except Exception as e:
+        logging.error(f"Failed to read file: {e}")
+        sys.exit(1)
 
+    logging.info("--- Data Quality Report ---")
+    logging.info(f"Total rows: {len(df)}")
 
-def check_raw_data() -> int:
-    """Check data for critical issues.
-    Returns 0 if data is fine, 1 if critical issues are found.
-    """
-    args = _parse_args()
-    file_path = Path(args.input)
-
-    if not file_path.exists():
-        logger.error(f"File {file_path} not found!")
-        return 1
-
-    # Load data
-    df = pd.read_parquet(file_path)
-    critical_error = False
-
-    logger.info("--- Data Quality Report ---")
-
-    # 1. Check structure
-    logger.info(f"Total rows: {len(df)}")
-
-    # 2. Check for missing values
-    nulls = df.isnull().sum().sum()
-    if nulls > 0:
-        logger.warning(f"Found {nulls} missing values.")
-        # Usually missing sensor data is normal and can be imputed
+    # 1. Check for Missing Values
+    if df.isnull().any().any():
+        logging.warning("Found missing values!")
+        logging.warning(df.isnull().sum())
     else:
-        logger.info("No missing values found.")
+        logging.info("No missing values found.")
 
-    # 3. Time range
+    # 2. Check Time Coverage
     df["timestamp"] = pd.to_datetime(df["timestamp"])
-    start_date, end_date = df["timestamp"].min(), df["timestamp"].max()
-    logger.info(f"Time coverage: from {start_date} to {end_date}")
+    start = df["timestamp"].min()
+    end = df["timestamp"].max()
+    logging.info(f"Time coverage: from {start} to {end}")
 
-    # 4. Physical consistency (PM2.5 and others cannot be < 0)
-    neg_values = df[df["value"] < 0]
-    if not neg_values.empty:
-        logger.error(f"CRITICAL ERROR: Found {len(neg_values)} negative values!")
-        logger.error(neg_values.head())
-        critical_error = True
-    else:
-        logger.info("No negative values found (physically consistent).")
+    # 3. Smart Negative Value Check
+    # Temperature can be negative, but PM2.5 and Humidity cannot.
 
-    # 5. Save cleaned data (remove noise if not critical)
-    if not critical_error:
-        df_clean = df[df["value"] >= 0].dropna()
-        output_path = Path(args.output_clean)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        df_clean.to_parquet(output_path, index=False)
-        logger.info(f"Cleaned data saved to {output_path}")
-        return 0
-    else:
-        logger.error("Validation failed. Please fix the data source.")
-        return 1
+    # Check PM2.5 and Humidity (must be >= 0)
+    physical_params = ["pm25", "humidity"]
+    neg_physical = df[(df["parameter"].isin(physical_params)) & (df["value"] < 0)]
+
+    # Check Temperature (let's say we only alert if it's below -50C, which is likely a sensor error)
+    unrealistic_temp = df[(df["parameter"] == "temp") & (df["value"] < -50)]
+
+    if not neg_physical.empty:
+        logging.error(
+            "CRITICAL ERROR: Found negative values in physical parameters (PM2.5/Humidity)!"
+        )
+        logging.error(neg_physical)
+        sys.exit(1)
+
+    if not unrealistic_temp.empty:
+        logging.error(
+            "CRITICAL ERROR: Found unrealistic temperature values (below -50C)!"
+        )
+        logging.error(unrealistic_temp)
+        sys.exit(1)
+
+    logging.info("Quality check passed successfully.")
 
 
 if __name__ == "__main__":
-    # Exit code is important for automation (just/ci-cd)
-    sys.exit(check_raw_data())
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", required=True, type=str)
+    args = parser.parse_args()
+    check_raw_data(args.input)
