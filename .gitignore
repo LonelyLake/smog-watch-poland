@@ -26,3 +26,6 @@ Thumbs.db
 # Environments
 .env
 .cache/coverage/.coverage
+
+.cache/
+src/smoke_watch.egg-info

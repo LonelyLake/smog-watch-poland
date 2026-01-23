@@ -2176,6 +2176,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "nbconvert" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "requests-mock" },
@@ -2198,6 +2199,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "nbconvert", specifier = ">=7.16.6" },
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
     { name = "requests-mock", specifier = ">=1.12.1" },

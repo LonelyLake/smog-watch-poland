@@ -24,6 +24,7 @@ check-quality = "data.check_quality:check_raw_data"
 
 [tool.uv]
 dev-dependencies = [
+    "nbconvert>=7.16.6",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
     "requests-mock>=1.12.1",
