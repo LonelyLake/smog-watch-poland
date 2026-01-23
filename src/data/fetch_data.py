@@ -14,7 +14,7 @@ from urllib3.util.retry import Retry
 # Load environment variables
 load_dotenv()
 
-# Constants in uppercase
+# Constants
 BASE_URL = "https://api.openaq.org/v3"
 DEFAULT_OUTPUT = Path("data/raw/katowice_zawodzie_history.parquet")
 
@@ -56,7 +56,7 @@ class OpenAQClient:
         """Fetch history for a specific sensor."""
         logger.info(f"Requesting data for {label} (ID: {sensor_id})...")
 
-        # Use UTC for consistency (important for MLOps)
+        # Use UTC for consistency
         start_date = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
         params = {
