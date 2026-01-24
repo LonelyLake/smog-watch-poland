@@ -16,23 +16,25 @@ dependencies = [
     "scikit-learn>=1.8.0",
     "seaborn>=0.13.2",
     "joblib>=1.3.2",
+    "pyyaml>=6.0.3",
 ]
 
 [project.scripts]
 fetch-data = "data.fetch_data:main"
 check-quality = "data.check_quality:check_raw_data"
+    
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
+    "pyyaml>=6.0.3",
     "nbconvert>=7.16.6",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
     "requests-mock>=1.12.1",
 ]
-
-[build-system]
-requires = ["setuptools>=68"]
-build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

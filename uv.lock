@@ -2168,6 +2168,7 @@ dependencies = [
     { name = "pandas" },
     { name = "pyarrow" },
     { name = "python-dotenv" },
+    { name = "pyyaml" },
     { name = "requests" },
     { name = "ruff" },
     { name = "scikit-learn" },
@@ -2179,6 +2180,7 @@ dev = [
     { name = "nbconvert" },
     { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "pyyaml" },
     { name = "requests-mock" },
 ]
 
@@ -2191,6 +2193,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.3.3" },
     { name = "pyarrow", specifier = ">=23.0.0" },
     { name = "python-dotenv", specifier = ">=1.2.1" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "requests", specifier = ">=2.32.5" },
     { name = "ruff", specifier = ">=0.14.13" },
     { name = "scikit-learn", specifier = ">=1.8.0" },
@@ -2202,6 +2205,7 @@ dev = [
     { name = "nbconvert", specifier = ">=7.16.6" },
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "requests-mock", specifier = ">=1.12.1" },
 ]
 

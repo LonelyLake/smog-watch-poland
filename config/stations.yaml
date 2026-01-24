@@ -1,0 +1,16 @@
+# Registry of official and citizen sensors for Silesia
+stations:
+  kossutha:
+    name: "Katowice-Kossutha (Reference)"
+    sensors:
+      pm25: 35221
+      pm10: 35232
+      no2: 35238
+      so2: 35220
+      o3: 35233
+  zawodzie:
+    name: "Katowice-Zawodzie (Citizen)"
+    sensors:
+      pm25: 14152505
+      temp: 14152507
+      humidity: 14152506
