@@ -1,26 +1,23 @@
-# SmogWatch Poland: Air Quality Monitoring & Analysis
+# SmogWatch Poland: Air Quality Data Pipeline
 
-A data engineering portfolio project analyzing air quality sensor data in Katowice, Poland using the OpenAQ API. This project demonstrates end-to-end data pipeline development, from data collection to exploratory analysis, with plans to expand into predictive modeling.
+Data engineering project for collecting and analyzing 
+air quality measurements from sensors in Katowice, Poland 
+using the OpenAQ v3 API.
 
-## Overview
+## What this project does
 
-This project currently focuses on collecting and analyzing air quality measurements from **private/citizen science sensors** (e.g., AirGradient devices) and **government reference stations** in the Silesia region. The pipeline is designed for scalability and follows MLOps best practices.
+- Fetches data from citizen sensors and government 
+  reference stations via OpenAQ API
+- Validates data quality (null checks, physical constraints, 
+  timestamp validation)
+- Stores data in Parquet format for efficient analytics
+- Exploratory analysis of PM2.5, PM10, NO₂ and other 
+  air quality parameters
 
-### Current Implementation (Phase 1)
+## Current Status
 
-- ✅ Multi-station data collection from OpenAQ v3 API
-- ✅ Support for both citizen sensors (Zawodzie) and government reference stations (Kossutha)
-- ✅ Configurable sensor registry using YAML
-- ✅ Robust error handling with exponential backoff retries
-- ✅ Data quality validation pipeline
-- ✅ Exploratory data analysis with Jupyter notebooks
-- ✅ Parquet-based storage for efficient analytics
-
-### Future Roadmap
-
-- 🔄 **Phase 2**: Expand to more government monitoring stations across Poland
-- 🔮 **Phase 3**: Develop ML models for air quality prediction and anomaly detection
-- 📊 **Phase 4**: Build real-time dashboard and alerting system
+Working pipeline with data collection, validation, 
+and exploratory analysis for Katowice/Silesia region.
 
 ## Project Structure
 
@@ -121,11 +118,11 @@ just discover "Name"  # Find sensor IDs by location name
 
 The project implements comprehensive data validation:
 
-- ✅ Null value detection and reporting
-- ✅ Negative value checks (physically impossible readings)
-- ✅ Timestamp range validation
-- ✅ Record count tracking
-- ✅ Parameter coverage analysis
+- Null value detection and reporting
+- Negative value checks (physically impossible readings)
+- Timestamp range validation
+- Record count tracking
+- Parameter coverage analysis
 
 **Note**: Citizen science sensors may have calibration limitations compared to reference-grade equipment. Analysis focuses on pattern identification rather than absolute accuracy validation.
 
@@ -137,17 +134,6 @@ The project implements comprehensive data validation:
 - **Visualization**: Matplotlib, Seaborn
 - **Development**: Ruff (linting), pytest (testing), uv (package management)
 - **Task Runner**: Just
-
-## Why This Project?
-
-This portfolio project demonstrates:
-
-1. **Data Engineering**: Building robust ETL pipelines with error handling
-2. **API Integration**: Working with real-world REST APIs (OpenAQ v3)
-3. **Configuration Management**: YAML-based sensor registry for maintainability  
-4. **Data Quality**: Implementing validation checks for data integrity
-5. **Best Practices**: Testing, linting, reproducible environments
-6. **Domain Knowledge**: Understanding air quality metrics and sensor limitations
 
 ## Contributing
 
