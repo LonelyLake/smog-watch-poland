@@ -57,7 +57,9 @@ def fetch_station(
             f"https://api.openaq.org/v3/sensors/{id}/measurements",
             headers=headers,
             params=params,
+            timeout=20,
         )
+        response.raise_for_status()
 
         data = response.json()
 
