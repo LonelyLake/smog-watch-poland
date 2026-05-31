@@ -1,3 +1,4 @@
+import argparse
 import logging
 import os
 from datetime import datetime, timedelta, timezone
@@ -78,12 +79,19 @@ def fetch_station(
 
 
 if __name__ == "__main__":
-    api_key = os.getenv("OPENAQ_API_KEY")
+    # Read arguments from terminal
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--station", type=str, default="kossutha")
+    parser.add_argument("--days", type=int, default=7)
+    args = parser.parse_args()
 
+    # Check if api_key exists
+    api_key = os.getenv("OPENAQ_API_KEY")
     if not api_key:
         raise ValueError("OPENAQ_API_KEY not found in .env")
 
-    station_name = "kossutha"
+    # Fetch station data and save it to .parquet file
+    station_name = args.station
     df = fetch_station(station_name, api_key=api_key)
     df.to_parquet(
         f"data/raw/katowice_{station_name}.parquet", index=False, compression="snappy"
