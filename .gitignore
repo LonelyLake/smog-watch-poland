@@ -6,13 +6,12 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 
-# Data & Models
+# Data
 data/raw/*
 data/processed/*
-models/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
-!models/.gitkeep
+
 *.parquet
 *.csv
 *.json
