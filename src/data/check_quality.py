@@ -25,7 +25,7 @@ def check_raw_data(input_path: str) -> None:
         logging.info("No missing values found.")
 
     # 2. Check Time Coverage
-    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
     start = df["timestamp"].min()
     end = df["timestamp"].max()
     logging.info(f"Time coverage: from {start} to {end}")

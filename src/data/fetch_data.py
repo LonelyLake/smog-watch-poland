@@ -71,6 +71,7 @@ def fetch_station(
                     "timestamp": result["period"]["datetimeTo"]["local"],
                     "value": result["value"],
                     "parameter": result["parameter"]["name"],
+                    "station": station_name,
                 }
             )
 
@@ -93,9 +94,14 @@ if __name__ == "__main__":
     if not api_key:
         raise ValueError("OPENAQ_API_KEY not found in .env")
 
-    # Fetch station data and save it to .parquet file
+    # Fetch station data
     station_name = args.station
     df = fetch_station(station_name, api_key=api_key, days=args.days)
+
+    # Covert timestamp to datetime format
+    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+
+    # Save station data to .parquet file
     df.to_parquet(
         f"data/raw/katowice_{station_name}.parquet", index=False, compression="snappy"
     )

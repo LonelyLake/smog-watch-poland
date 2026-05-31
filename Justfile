@@ -24,7 +24,7 @@ test:
 # --- Data Pipeline ---
 
 # Full pipeline: Fetch -> Validate
-pipeline: fetch validate
+pipeline: fetch validate load
 
 # 1. Fetch data for a specific station from config/stations.yaml
 fetch:
@@ -33,6 +33,10 @@ fetch:
 # 2. Validate data quality for the specific station
 validate:
     uv run src/data/check_quality.py --input data/raw/katowice_{{station}}.parquet
+
+# 3. Load data into PostgreSQL
+load:
+    uv run src/data/load_to_postgres.py
 
 # --- Sensor Discovery ---
 
