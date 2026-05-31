@@ -7,6 +7,8 @@ import pandas as pd
 import requests
 import yaml
 from dotenv import load_dotenv
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -15,20 +17,42 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 def fetch_station(
     station_name: str = "kossutha", api_key: Optional[str] = None
 ) -> pd.DataFrame:
+    """
+    Fetch air quality measurements for a station from OpenAQ API.
+
+    Args:
+        station_name: Station key from config/stations.yaml
+        api_key: OpenAQ API key
+
+    Returns:
+        DataFrame with columns: timestamp, value, parameter
+    """
+
     all_measurements = []
 
+    # Read sensors from stations.yaml
     with open("config/stations.yaml", "r") as f:
         config = yaml.safe_load(f)
 
     sensors = config["stations"][station_name]["sensors"]
+
+    # Set up session
+    session = requests.Session()
+    retries = Retry(
+        total=3,
+        backoff_factor=1,
+        status_forcelist=[429, 500, 502, 503, 504],
+    )
+    session.mount("https://", HTTPAdapter(max_retries=retries))
 
     headers = {"X-API-Key": api_key}
 
     start_date = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
     params = {"datetime_from": start_date, "limit": 1000}
 
+    # Get sensors measurements (timestamp, value, parameter)
     for name, id in sensors.items():
-        response = requests.get(
+        response = session.get(
             f"https://api.openaq.org/v3/sensors/{id}/measurements",
             headers=headers,
             params=params,
@@ -46,6 +70,7 @@ def fetch_station(
                 }
             )
 
+        # Save measurements to list
         all_measurements.extend(measurements)
         logging.info(f"Fetched {len(measurements)} records for {name}")
 
