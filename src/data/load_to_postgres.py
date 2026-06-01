@@ -4,14 +4,12 @@ import os
 import pandas as pd
 import psycopg2
 from dotenv import load_dotenv
+from psycopg2.extras import execute_values
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 df = pd.read_parquet("data/raw/katowice_kossutha.parquet")
-
-inserted = 0
-skipped = 0
 
 with psycopg2.connect(
     host="localhost",
@@ -21,20 +19,23 @@ with psycopg2.connect(
     password=os.getenv("POSTGRES_PASSWORD"),
 ) as conn:
     with conn.cursor() as cursor:
-        for _, row in df.iterrows():
-            cursor.execute(
-                """
-                INSERT INTO measurements (timestamp, value, parameter, station)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT DO NOTHING
-                """,
-                (row["timestamp"], row["value"], row["parameter"], row["station"]),
-            )
+        rows = [
+            (row["timestamp"], row["value"], row["parameter"], row["station"])
+            for _, row in df.iterrows()
+        ]
 
-            if cursor.rowcount == 1:
-                inserted += 1
-            else:
-                skipped += 1
+        execute_values(
+            cursor,
+            """
+            INSERT INTO measurements (timestamp, value, parameter, station)
+            VALUES %s
+            ON CONFLICT DO NOTHING
+            """,
+            rows,
+        )
+
     conn.commit()
 
-logging.info(f"Inserted: {inserted} | Skipped: {skipped}")
+    inserted = cursor.rowcount
+    skipped = len(rows) - inserted
+    logging.info(f"Inserted: {inserted} | Skipped: {skipped}")
