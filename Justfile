@@ -36,7 +36,7 @@ validate:
 
 # 3. Load data into PostgreSQL
 load:
-    uv run src/data/load_to_postgres.py
+    uv run src/data/load_to_postgres.py --input data/raw/katowice_{{station}}.parquet
 
 # --- Sensor Discovery ---
 
