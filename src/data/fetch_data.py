@@ -27,14 +27,21 @@ def fetch_station(
         days: Number of days of history to fetch
 
     Returns:
-        DataFrame with columns: timestamp, value, parameter
+        DataFrame with columns: timestamp, value, parameter, station
     """
+
+    if not api_key:
+        raise ValueError("api_key is required")
 
     all_measurements = []
 
     # Read sensors from stations.yaml
     with open("config/stations.yaml", "r") as f:
         config = yaml.safe_load(f)
+
+    if station_name not in config["stations"]:
+        available = list(config["stations"].keys())
+        raise ValueError(f"Station '{station_name}' not found. Available: {available}")
 
     sensors = config["stations"][station_name]["sensors"]
 
@@ -54,13 +61,26 @@ def fetch_station(
 
     # Get sensors measurements (timestamp, value, parameter)
     for name, id in sensors.items():
-        response = session.get(
-            f"https://api.openaq.org/v3/sensors/{id}/measurements",
-            headers=headers,
-            params=params,
-            timeout=20,
-        )
-        response.raise_for_status()
+        try:
+            response = session.get(
+                f"https://api.openaq.org/v3/sensors/{id}/measurements",
+                headers=headers,
+                params=params,
+                timeout=20,
+            )
+            response.raise_for_status()
+        except requests.exceptions.ConnectionError as e:
+            logging.error(f"Connection failed for {name}: {e}")
+            continue
+        except requests.exceptions.Timeout as e:
+            logging.error(f"Timeout for {name}: {e}")
+            continue
+        except requests.exceptions.HTTPError as e:
+            logging.error(f"HTTP error for {name}: {e}")
+            continue
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Unexpected error for {name}: {e}")
+            continue
 
         data = response.json()
 
@@ -75,11 +95,16 @@ def fetch_station(
                 }
             )
 
-        # Save measurements to list
         all_measurements.extend(measurements)
         logging.info(f"Fetched {len(measurements)} records for {name}")
 
-    return pd.DataFrame(all_measurements)
+    if not all_measurements:
+        logging.warning(f"No data fetched for station: {station_name}")
+
+    df = pd.DataFrame(all_measurements)
+    # Covert timestamp to datetime format
+    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+    return df
 
 
 if __name__ == "__main__":
@@ -97,9 +122,6 @@ if __name__ == "__main__":
     # Fetch station data
     station_name = args.station
     df = fetch_station(station_name, api_key=api_key, days=args.days)
-
-    # Covert timestamp to datetime format
-    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
 
     # Save station data to .parquet file
     df.to_parquet(
