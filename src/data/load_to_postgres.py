@@ -49,10 +49,11 @@ def load_to_postgres(parquet_path: str) -> None:
     ) as conn:
         # Insert data to table measurements
         with conn.cursor() as cursor:
-            rows = [
-                (row["timestamp"], row["value"], row["parameter"], row["station"])
-                for _, row in df.iterrows()
-            ]
+            rows = (
+                df[["timestamp", "value", "parameter", "station"]]
+                .to_records(index=False)
+                .tolist()
+            )
 
             execute_values(
                 cursor,
