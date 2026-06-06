@@ -9,9 +9,9 @@ dependencies = [
     "matplotlib>=3.10.8",
     "numpy>=2.4.1",
     "pandas>=2.3.3",
-    "pyarrow>=23.0.0",
-    "python-dotenv>=1.2.1",
-    "requests>=2.32.5",
+    "pyarrow>=23.0.1",
+    "python-dotenv>=1.2.2",
+    "requests>=2.33.0",
     "ruff>=0.14.13",
     "scikit-learn>=1.8.0",
     "seaborn>=0.13.2",
@@ -32,8 +32,8 @@ build-backend = "setuptools.build_meta"
 [dependency-groups]
 dev = [
     "pyyaml>=6.0.3",
-    "nbconvert>=7.16.6",
-    "pytest>=9.0.2",
+    "nbconvert>=7.17.1",
+    "pytest>=9.0.3",
     "pytest-cov>=7.0.0",
     "requests-mock>=1.12.1",
 ]
