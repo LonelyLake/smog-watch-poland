@@ -55,3 +55,13 @@ discover-id id:
 # Start Jupyter Lab for EDA
 eda:
     uv run jupyter lab
+
+# --- Cleaning ---
+
+# Remove temporary files
+clean:
+    rm -rf data/raw
+    mkdir -p data/raw
+    rm -rf .cache/pytest
+    rm -rf .cache/ruff
+    rm -rf .cache/coverage
