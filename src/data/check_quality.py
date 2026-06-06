@@ -37,12 +37,14 @@ def check_raw_data(input_path: str) -> None:
     physical_params = ["pm25", "humidity"]
     neg_physical = df[(df["parameter"].isin(physical_params)) & (df["value"] < 0)]
 
-    # Check Temperature (let's say we only alert if it's below -50C, which is likely a sensor error)
+    # Check Temperature (let's say we only alert if it's below -50C,
+    # which is likely a sensor error)
     unrealistic_temp = df[(df["parameter"] == "temp") & (df["value"] < -50)]
 
     if not neg_physical.empty:
         logging.error(
-            "CRITICAL ERROR: Found negative values in physical parameters (PM2.5/Humidity)!"
+            "CRITICAL ERROR: Found negative values "
+            "in physical parameters (PM2.5/Humidity)!"
         )
         logging.error(neg_physical)
         sys.exit(1)
