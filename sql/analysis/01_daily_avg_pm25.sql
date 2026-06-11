@@ -2,15 +2,11 @@
 -- Sorted by highest pollution days
 
 SELECT
-	DATE_TRUNC('day', timestamp)::DATE AS day, ROUND(AVG(value)::NUMERIC, 2) AS pm2_5
-FROM 
-	measurements
-WHERE 
-	station = 'kossutha'
+	timestamp::DATE AS day,
+	ROUND(AVG(value)::NUMERIC, 2) AS pm2_5
+FROM measurements
+WHERE station = 'kossutha'
 	AND parameter = 'pm25'
-GROUP BY 
-	day
-ORDER BY
-	pm2_5 DESC
-LIMIT
-	10;
+GROUP BY day
+ORDER BY pm2_5 DESC
+LIMIT 10;
