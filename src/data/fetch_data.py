@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import sys
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -100,10 +101,9 @@ def fetch_station(
 
     if not all_measurements:
         logging.warning(f"No data fetched for station: {station_name}")
+        sys.exit(1)
 
     df = pd.DataFrame(all_measurements)
-    # Covert timestamp to datetime format
-    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
     return df
 
 
