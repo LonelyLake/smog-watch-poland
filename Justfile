@@ -23,20 +23,23 @@ test:
 
 # --- Data Pipeline ---
 
-# Full pipeline: Fetch -> Validate
+# Full pipeline: Fetch -> Validate -> Load
 pipeline: fetch validate load
 
-# 1. Fetch data for a specific station from config/stations.yaml
+# 1. Fetch data for a specific station from config/stations.yaml (Сохраняет в data/raw)
 fetch:
     uv run src/data/fetch_data.py --station {{station}}
 
-# 2. Validate data quality for the specific station
+# 2. Validate data quality and save cleaned data to data/clean
 validate:
-    uv run src/data/check_quality.py --input data/raw/katowice_{{station}}.parquet
+    uv run src/data/check_quality.py \
+        --input data/raw/katowice_{{station}}.parquet \
+        --output data/clean/katowice_{{station}}_clean.parquet
 
-# 3. Load data into PostgreSQL
+# 3. Load cleaned data into PostgreSQL
 load:
-    uv run src/data/load_to_postgres.py --input data/raw/katowice_{{station}}.parquet
+    uv run src/data/load_to_postgres.py \
+        --input data/clean/katowice_{{station}}_clean.parquet
 
 # --- Sensor Discovery ---
 
@@ -58,10 +61,10 @@ eda:
 
 # --- Cleaning ---
 
-# Remove temporary files
+# Remove temporary files and recreate data directories
 clean:
-    rm -rf data/raw
-    mkdir -p data/raw
+    rm -rf data/raw data/clean
+    mkdir -p data/raw data/clean
     rm -rf .cache/pytest
     rm -rf .cache/ruff
     rm -rf .cache/coverage
