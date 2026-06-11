@@ -1,48 +1,104 @@
 # SmogWatch Poland: Air Quality Data Pipeline
 
-Data engineering project for collecting and analyzing 
-air quality measurements from sensors in Katowice, Poland 
-using the OpenAQ v3 API.
+[![Python 3.12](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/)
+[![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-black.svg)](https://github.com/astral-sh/ruff)
+[![Package Manager: uv](https://img.shields.io/badge/package%20manager-uv-purple.svg)](https://github.com/astral-sh/uv)
+[![Database: PostgreSQL](https://img.shields.io/badge/database-PostgreSQL-blue.svg)](https://www.postgresql.org/)
+
+ETL pipeline collecting and analyzing air quality measurements from government and citizen sensors in Katowice, Poland using the OpenAQ v3 API.
+
+## Architecture
+
+OpenAQ API → Parquet (Bronze Layer) → Parquet (Silver Layer) → PostgreSQL (Storage) → SQL Analytics (Gold Layer)
 
 ## What this project does
 
-- Fetches data from citizen sensors and government 
-  reference stations via OpenAQ API
-- Validates data quality (null checks, physical constraints, 
-  timestamp validation)
-- Stores data in Parquet format for efficient analytics
-- Exploratory analysis of PM2.5, PM10, NO₂ and other 
-  air quality parameters
+- **Robust Ingestion**: Fetches PM2.5, PM10, NO₂, SO₂, O₃ data from OpenAQ v3 API with automated exponential backoff and network retry logic.
+- **Structured Bronze**: Stores immutable raw snapshots in compressed Parquet format to optimize local disk usage and memory efficiency under WSL2.
+- **Physical Silver Layer**: Validates data against nulls, physical anomalies (e.g., negative values), and timestamp alignment, outputting sanitized Parquet states.
+- **Idempotent DB Storage**: Loads cleaned data into PostgreSQL using transactional bulk upserts (`ON CONFLICT DO NOTHING`) via a composite primary key.
 
-## Current Status
+## Pipeline
 
-Working pipeline with data collection, validation, 
-and exploratory analysis for Katowice/Silesia region.
+```
+fetch_data.py → check_quality.py → load_to_postgres.py
+```
+
+Run the full pipeline:
+
+```bash
+just pipeline
+```
 
 ## Project Structure
 
 ```
 smog-watch-poland/
 ├── config/
-│   └── stations.yaml          # Sensor registry (IDs, parameters)
+│   └── stations.yaml           # Sensor registry (IDs, parameters)
 ├── data/
-│   ├── raw/                   # Parquet files from OpenAQ
-│   └── processed/             # Cleaned datasets
-├── notebooks/
-│   └── eda_jan2026_*.ipynb    # Exploratory analysis
+│   ├── raw/                    # Immutable raw data snapshots (Bronze Layer)
+│   └── clean/                  # Sanitized, type-safe data (Silver Layer)
+├── sql/
+│   ├── schema/
+│   │   └── init.sql            # PostgreSQL schema, constraints + composite indexes
+│   └── analysis/
+│       ├── 01_daily_avg_pm25.sql    # Daily PM2.5 averages
+│       ├── 02_who_limits.sql        # WHO guideline exceedances
+│       └── 03_parameter_stats.sql  # Advanced statistics (including medians)
 ├── src/data/
-│   ├── fetch_data.py          # OpenAQ API client
-│   └── check_quality.py       # Data validation
+│   ├── fetch_data.py           # API client with retry budgets & empty data guards
+│   ├── check_quality.py        # Data validation and physical constraint filtering
+│   └── load_to_postgres.py     # Batch loader with idempotent upsert logic
 ├── scripts/
-│   └── discover_sensors.py    # Sensor discovery tool
-└── tests/                     # Unit tests with pytest
+│   └── discover_sensors.py     # Sensor discovery tool (fuzzy lookup)
+└── tests/                      # Unit tests with pytest
+```
+
+## Quick Start
+
+### 1. Start PostgreSQL
+
+```bash
+docker compose up -d
+```
+
+### 2. Configure environment
+
+```bash
+cp .env.example .env
+# Fill in your OpenAQ API key and PostgreSQL credentials
+```
+
+### 3. Install dependencies
+
+```bash
+just setup
+```
+
+### 4. Run pipeline
+
+```bash
+just pipeline
+```
+
+## Available Commands
+
+```bash
+just pipeline        # Run full E-t-L-T chain: fetch → validate → load
+just fetch           # Extract raw data from API to Bronze layer
+just validate        # Run QA checks, filter anomalies, and output to Silver layer
+just load            # Bulk load Silver Parquet data into PostgreSQL
+just test            # Execute unit test suite with pytest
+just lint            # Verify code quality and format using Ruff
+just discover "Name" # Run fuzzy search for sensor IDs by city/location
 ```
 
 ## Monitored Parameters
 
 | Parameter | Source | Description |
 |-----------|--------|-------------|
-| PM2.5 | Citizen & Government | Fine particulate matter |
+| PM2.5 | Government | Fine particulate matter |
 | PM10 | Government | Coarse particulate matter |
 | NO₂ | Government | Nitrogen dioxide |
 | SO₂ | Government | Sulfur dioxide |
@@ -50,101 +106,39 @@ smog-watch-poland/
 | Temperature | Citizen | Ambient temperature |
 | Humidity | Citizen | Relative humidity |
 
-## Quick Start
+## Analytical Questions
 
-### 1. Setup Environment
+SQL queries in `sql/analysis/` answer:
 
-```bash
-# Install dependencies using uv
-just setup
+- **Daily PM2.5 averages** — which days had highest pollution?
+- **WHO exceedances** — days exceeding 15 µg/m³ guideline (2021)
+- **Parameter statistics** — min, max, avg, median per parameter
 
-# Or manually
-uv sync
-```
+## Data Quality
 
-### 2. Configure API Access
-
-Create a `.env` file with your OpenAQ API key:
-
-```bash
-OPENAQ_API_KEY=your_key_here
-```
-
-Get your free API key at: https://openaq.org
-
-### 3. Fetch Data
-
-```bash
-# Fetch from government reference station (Kossutha)
-just fetch
-
-# Or specify a station from config/stations.yaml
-uv run src/data/fetch_data.py --station kossutha --days 7
-
-# Fetch from citizen sensor (Zawodzie)
-uv run src/data/fetch_data.py --station zawodzie --days 7
-```
-
-### 4. Validate Data Quality
-
-```bash
-just validate
-
-# Or manually
-uv run src/data/check_quality.py --input data/raw/katowice_kossutha.parquet
-```
-
-### 5. Explore Data
-
-```bash
-just eda
-```
-
-This launches Jupyter Lab for interactive analysis.
-
-## Available Commands (Justfile)
-
-```bash
-just setup          # Install dependencies
-just fetch          # Fetch data (default: Kossutha station)
-just validate       # Run data quality checks
-just lint           # Format and lint code with Ruff
-just test           # Run unit tests
-just eda            # Start Jupyter Lab
-just discover "Name"  # Find sensor IDs by location name
-```
-
-## Data Quality Approach
-
-The project implements comprehensive data validation:
-
-- Null value detection and reporting
+- Null value detection
 - Negative value checks (physically impossible readings)
 - Timestamp range validation
-- Record count tracking
-- Parameter coverage analysis
+- Upsert deduplication in PostgreSQL (composite primary key)
 
-**Note**: Citizen science sensors may have calibration limitations compared to reference-grade equipment. Analysis focuses on pattern identification rather than absolute accuracy validation.
+**Note**: Citizen sensors may have calibration limitations 
+vs reference-grade equipment.
 
 ## Technical Stack
 
 - **Language**: Python 3.12+
-- **Data**: Pandas, PyArrow (Parquet)
-- **API Client**: Requests with retry logic
-- **Visualization**: Matplotlib, Seaborn
-- **Development**: Ruff (linting), pytest (testing), uv (package management)
-- **Task Runner**: Just
-
-## Contributing
-
-This is a personal portfolio project, but suggestions are welcome! Feel free to open an issue for feedback.
+- **Data**: Pandas, PyArrow, Parquet
+- **Database**: PostgreSQL (Docker), psycopg2
+- **API**: Requests with exponential backoff retry
+- **Development**: Ruff, pytest, uv, Just
+- **Infrastructure**: Docker, docker-compose
 
 ## License
 
-MIT License - See LICENSE file for details
+MIT License
 
 ## Acknowledgments
 
-- Air quality data provided by [OpenAQ](https://openaq.org)
-- Citizen science sensors via AirGradient network
-- Government reference data from Polish Chief Inspectorate for Environmental Protection
+- Air quality data: [OpenAQ](https://openaq.org)
+- Citizen sensors: AirGradient network
+- Government data: Polish Chief Inspectorate for Environmental Protection
