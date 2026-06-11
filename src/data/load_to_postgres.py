@@ -75,7 +75,7 @@ def load_to_postgres(parquet_path: str) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--input", type=str, default="data/raw/katowice_kossutha.parquet"
+        "--input", type=str, default="data/clean/katowice_kossutha_clean.parquet"
     )
     args = parser.parse_args()
     load_to_postgres(args.input)
