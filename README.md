@@ -5,7 +5,7 @@
 [![Package Manager: uv](https://img.shields.io/badge/package%20manager-uv-purple.svg)](https://github.com/astral-sh/uv)
 [![Database: PostgreSQL](https://img.shields.io/badge/database-PostgreSQL-blue.svg)](https://www.postgresql.org/)
 
-ETL pipeline collecting and analyzing air quality measurements from government and citizen sensors in Katowice, Poland using the OpenAQ v3 API.
+ETL pipeline for collecting, validating, and loading air quality measurements from sensors in Katowice, Poland using the OpenAQ v3 API.
 
 ## Architecture
 
@@ -13,10 +13,10 @@ OpenAQ API → Parquet (Bronze Layer) → Parquet (Silver Layer) → PostgreSQL 
 
 ## What this project does
 
-- **Robust Ingestion**: Fetches PM2.5, PM10, NO₂, SO₂, O₃ data from OpenAQ v3 API with automated exponential backoff and network retry logic.
-- **Structured Bronze**: Stores immutable raw snapshots in compressed Parquet format to optimize local disk usage and memory efficiency under WSL2.
-- **Physical Silver Layer**: Validates data against nulls, physical anomalies (e.g., negative values), and timestamp alignment, outputting sanitized Parquet states.
-- **Idempotent DB Storage**: Loads cleaned data into PostgreSQL using transactional bulk upserts (`ON CONFLICT DO NOTHING`) via a composite primary key.
+- **Robust Ingestion**: Fetches PM2.5, PM10, NO₂, SO₂, O₃ measurements from OpenAQ v3 API with retries for transient request failures.
+- **Structured Bronze**: Stores raw API snapshots in compressed Parquet format.
+- **Silver Layer Validation**: Converts timestamps to UTC, rejects malformed timestamps, and filters obviously invalid readings such as negative particulate values and extreme temperatures.
+- **Idempotent DB Storage**: Loads cleaned data into PostgreSQL using `ON CONFLICT DO NOTHING` with a composite primary key on `(timestamp, parameter, station)`.
 
 ## Pipeline
 
@@ -33,7 +33,7 @@ just pipeline
 ## Project Structure
 
 ```
-smog-watch-poland/
+smoke-watch/
 ├── config/
 │   └── stations.yaml           # Sensor registry (IDs, parameters)
 ├── data/
@@ -41,14 +41,14 @@ smog-watch-poland/
 │   └── clean/                  # Sanitized, type-safe data (Silver Layer)
 ├── sql/
 │   ├── schema/
-│   │   └── init.sql            # PostgreSQL schema, constraints + composite indexes
+│   │   └── init.sql            # PostgreSQL schema with composite primary key
 │   └── analysis/
 │       ├── 01_daily_avg_pm25.sql    # Daily PM2.5 averages
 │       ├── 02_who_limits.sql        # WHO guideline exceedances
-│       └── 03_parameter_stats.sql  # Advanced statistics (including medians)
+│       └── 03_parameter_stats.sql   # Per-parameter min/max/avg/median
 ├── src/data/
-│   ├── fetch_data.py           # API client with retry budgets & empty data guards
-│   ├── check_quality.py        # Data validation and physical constraint filtering
+│   ├── fetch_data.py           # API client with retry handling
+│   ├── check_quality.py        # Timestamp normalization and basic physical checks
 │   └── load_to_postgres.py     # Batch loader with idempotent upsert logic
 ├── scripts/
 │   └── discover_sensors.py     # Sensor discovery tool (fuzzy lookup)
@@ -85,7 +85,7 @@ just pipeline
 ## Available Commands
 
 ```bash
-just pipeline        # Run full E-t-L-T chain: fetch → validate → load
+just pipeline        # Run full ETL chain: fetch → validate → load
 just fetch           # Extract raw data from API to Bronze layer
 just validate        # Run QA checks, filter anomalies, and output to Silver layer
 just load            # Bulk load Silver Parquet data into PostgreSQL
@@ -108,21 +108,31 @@ just discover "Name" # Run fuzzy search for sensor IDs by city/location
 
 ## Analytical Questions
 
-SQL queries in `sql/analysis/` answer:
+SQL queries in `sql/analysis/` cover:
 
-- **Daily PM2.5 averages** — which days had highest pollution?
-- **WHO exceedances** — days exceeding 15 µg/m³ guideline (2021)
-- **Parameter statistics** — min, max, avg, median per parameter
+- Daily PM2.5 averages for Kossutha
+- Days exceeding the WHO PM2.5 guideline of 15 µg/m³
+- Per-parameter statistics: count, min, max, average, median
 
 ## Data Quality
 
-- Null value detection
-- Negative value checks (physically impossible readings)
-- Timestamp range validation
-- Upsert deduplication in PostgreSQL (composite primary key)
+- Timestamp parsing and UTC normalization
+- Negative value checks for selected parameters
+- Basic outlier filtering for temperature readings
+- Upsert deduplication in PostgreSQL via a composite primary key
 
-**Note**: Citizen sensors may have calibration limitations 
-vs reference-grade equipment.
+**Note**: Citizen sensors may have calibration limitations compared with reference-grade equipment, so the pipeline treats them as a separate data source rather than the same quality tier.
+
+## Portfolio Notes
+
+This project is intentionally small and honest in scope. It shows that you can:
+
+- build a repeatable data pipeline end to end;
+- work with Parquet, PostgreSQL, and SQL-based analysis;
+- write tests and run the project through a reproducible local setup;
+- document limitations instead of overstating production readiness.
+
+The current validation layer catches obvious bad values but does not attempt full statistical anomaly detection.
 
 ## Technical Stack
 
