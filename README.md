@@ -125,7 +125,7 @@ SQL queries in `sql/analysis/` cover:
 
 ## Portfolio Notes
 
-This project is intentionally small and honest in scope. It shows that you can:
+This project is intentionally small and honest in scope. It shows that I can:
 
 - build a repeatable data pipeline end to end;
 - work with Parquet, PostgreSQL, and SQL-based analysis;
