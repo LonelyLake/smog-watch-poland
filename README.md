@@ -137,7 +137,7 @@ The current validation layer catches obvious bad values but does not attempt ful
 ## Technical Stack
 
 - **Language**: Python 3.12+
-- **Data**: Pandas, PyArrow, Parquet
+- **Data**: Pandas, Parquet
 - **Database**: PostgreSQL (Docker), psycopg2
 - **API**: Requests with exponential backoff retry
 - **Development**: Ruff, pytest, uv, Just
