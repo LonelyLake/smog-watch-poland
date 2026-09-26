@@ -61,15 +61,14 @@ def fetch_station(
     params = {"datetime_from": start_date, "limit": 1000}
 
     # Get sensors measurements (timestamp, value, parameter)
-    for name, id in sensors.items():
+    for name, sensor_id in sensors.items():
         try:
-            response = session.get(
-                f"https://api.openaq.org/v3/sensors/{id}/measurements",
+            results = fetch_sensor_measurements(
+                session=session,
+                sensor_id=sensor_id,
                 headers=headers,
                 params=params,
-                timeout=20,
             )
-            response.raise_for_status()
         except requests.exceptions.ConnectionError as e:
             logging.error(f"Connection failed for {name}: {e}")
             continue
@@ -83,10 +82,8 @@ def fetch_station(
             logging.error(f"Unexpected error for {name}: {e}")
             continue
 
-        data = response.json()
-
         measurements = []
-        for result in data["results"]:
+        for result in results:
             measurements.append(
                 {
                     "timestamp": result["period"]["datetimeTo"]["local"],
@@ -105,6 +102,43 @@ def fetch_station(
 
     df = pd.DataFrame(all_measurements)
     return df
+
+
+def fetch_sensor_measurements(
+    session: requests.Session,
+    sensor_id: int,
+    headers: dict[str, str],
+    params: dict[str, str | int],
+) -> list[dict]:
+    """Fetch all measurements for a sensor across API pages."""
+
+    all_measurements = []
+    page = 1
+    request_params = params.copy()
+    limit = int(params["limit"])
+
+    while True:
+        request_params["page"] = page
+
+        response = session.get(
+            f"https://api.openaq.org/v3/sensors/{sensor_id}/measurements",
+            headers=headers,
+            params=request_params,
+            timeout=20,
+        )
+        response.raise_for_status()
+
+        data = response.json()
+        results = data["results"]
+
+        all_measurements.extend(results)
+
+        if len(results) < limit:
+            break
+
+        page += 1
+
+    return all_measurements
 
 
 if __name__ == "__main__":
