@@ -28,20 +28,25 @@ def validate_and_clean_data(input_path: str, output_path: str) -> None:
         sys.exit(1)
 
     # 3. Data cleaning
-    physical_params = ["pm25", "pm10", "humidity"]
+    # Observed -1 readings for SO2 at Kossutha (likely a missing-data marker)
+    non_negative = ["pm25", "pm10", "no2", "so2", "o3"]
 
-    invalid_physical = (df["parameter"].isin(physical_params)) & (df["value"] < 0)
-    invalid_temp = (df["parameter"] == "temp") & (
+    invalid_negative = df["parameter"].isin(non_negative) & (df["value"] < 0)
+    invalid_humidity = (df["parameter"] == "relativehumidity") & (
+        (df["value"] < 0) | (df["value"] > 100)
+    )
+    invalid_temp = (df["parameter"] == "temperature") & (
         (df["value"] < -50) | (df["value"] > 60)
     )
 
-    mask_to_keep = ~(invalid_physical | invalid_temp)
+    mask_to_keep = ~(invalid_negative | invalid_humidity | invalid_temp)
     df_clean = df[mask_to_keep]
 
     removed_rows = initial_rows - len(df_clean)
     if removed_rows > 0:
+        breakdown = df[~mask_to_keep].groupby("parameter").size().to_dict()
         logging.warning(
-            f"Filtered out {removed_rows} anomalous rows (negative PM or crazy temp)."
+            f"Filtered out {removed_rows} rows violating physical limits: {breakdown}"
         )
 
     # 4. Staging
