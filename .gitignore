@@ -8,9 +8,9 @@ __pycache__/
 
 # Data
 data/raw/*
-data/processed/*
+data/clean/*
 !data/raw/.gitkeep
-!data/processed/.gitkeep
+!data/clean/.gitkeep
 
 *.parquet
 *.csv

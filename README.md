@@ -9,14 +9,16 @@ ETL pipeline for collecting, validating, and loading air quality measurements fr
 
 ## Architecture
 
-OpenAQ API → Parquet (Bronze Layer) → Parquet (Silver Layer) → PostgreSQL (Storage) → SQL Analytics (Gold Layer)
+OpenAQ API → Parquet (Bronze) → Parquet (Silver) → PostgreSQL → SQL analytics
+
+The Gold layer (dbt models on top of PostgreSQL) is planned.
 
 ## What this project does
 
-- **Robust Ingestion**: Fetches PM2.5, PM10, NO₂, SO₂, O₃ measurements from OpenAQ v3 API with retries for transient request failures.
-- **Structured Bronze**: Stores raw API snapshots in compressed Parquet format.
-- **Silver Layer Validation**: Converts timestamps to UTC, rejects malformed timestamps, and filters obviously invalid readings such as negative particulate values and extreme temperatures.
-- **Idempotent DB Storage**: Loads cleaned data into PostgreSQL using `ON CONFLICT DO NOTHING` with a composite primary key on `(timestamp, parameter, station)`.
+- **Robust Ingestion**: Fetches PM2.5, PM10, NO₂, SO₂, O₃ measurements from the OpenAQ v3 API with retries and exponential backoff for transient failures (429, 5xx).
+- **Bronze**: Stores extracted API fields (timestamp, value, parameter, station) as compressed Parquet. The file is overwritten on each run; immutable timestamped snapshots are planned (#13).
+- **Silver Layer Validation**: Converts timestamps to UTC, stops on unparseable timestamps, and drops physically invalid readings: negative pollutant values (including sentinel −1 readings observed for SO₂ at Kossutha), humidity outside 0–100 %, and temperature outside −50…60 °C. Full schema validation is planned (#14).
+- **Idempotent DB Storage**: Loads cleaned data into PostgreSQL with `INSERT ... ON CONFLICT DO NOTHING` on a composite primary key `(timestamp, parameter, station)`. Re-running does not create duplicates; existing rows are not updated.
 
 ## Pipeline
 
@@ -33,12 +35,12 @@ just pipeline
 ## Project Structure
 
 ```
-smoke-watch/
+smog-watch-poland/
 ├── config/
 │   └── stations.yaml           # Sensor registry (IDs, parameters)
 ├── data/
-│   ├── raw/                    # Immutable raw data snapshots (Bronze Layer)
-│   └── clean/                  # Sanitized, type-safe data (Silver Layer)
+│   ├── raw/                    # Extracted API data (Bronze), overwritten on each run
+│   └── clean/                  # Validated data (Silver Layer)
 ├── sql/
 │   ├── schema/
 │   │   └── init.sql            # PostgreSQL schema with composite primary key
@@ -49,7 +51,7 @@ smoke-watch/
 ├── src/data/
 │   ├── fetch_data.py           # API client with retry handling
 │   ├── check_quality.py        # Timestamp normalization and basic physical checks
-│   └── load_to_postgres.py     # Batch loader with idempotent upsert logic
+│   └── load_to_postgres.py     # Batch loader with idempotent insert-ignore loading
 ├── scripts/
 │   └── discover_sensors.py     # Sensor discovery tool (fuzzy lookup)
 └── tests/                      # Unit tests with pytest
@@ -57,17 +59,17 @@ smoke-watch/
 
 ## Quick Start
 
-### 1. Start PostgreSQL
-
-```bash
-docker compose up -d
-```
-
-### 2. Configure environment
+### 1. Configure environment
 
 ```bash
 cp .env.example .env
 # Fill in your OpenAQ API key and PostgreSQL credentials
+```
+
+### 2. Start PostgreSQL
+
+```bash
+docker compose up -d
 ```
 
 ### 3. Install dependencies
@@ -117,9 +119,9 @@ SQL queries in `sql/analysis/` cover:
 ## Data Quality
 
 - Timestamp parsing and UTC normalization
-- Negative value checks for selected parameters
-- Basic outlier filtering for temperature readings
-- Upsert deduplication in PostgreSQL via a composite primary key
+- Negative-value checks for all pollutants (PM2.5, PM10, NO₂, SO₂, O₃)
+- Range checks for relative humidity (0–100 %) and temperature (−50…60 °C)
+- Deduplication in PostgreSQL via a composite primary key (insert-ignore)
 
 **Note**: Citizen sensors may have calibration limitations compared with reference-grade equipment, so the pipeline treats them as a separate data source rather than the same quality tier.
 
@@ -129,7 +131,7 @@ This project is intentionally small and honest in scope. It shows that I can:
 
 - build a repeatable data pipeline end to end;
 - work with Parquet, PostgreSQL, and SQL-based analysis;
-- write tests and run the project through a reproducible local setup;
+- write unit tests for ingestion and validation (loading tests are planned, #17) and run the project through a reproducible local setup;
 - document limitations instead of overstating production readiness.
 
 The current validation layer catches obvious bad values but does not attempt full statistical anomaly detection.
@@ -143,6 +145,13 @@ The current validation layer catches obvious bad values but does not attempt ful
 - **Development**: Ruff, pytest, uv, Just
 - **Infrastructure**: Docker, docker-compose
 
+## Known Limitations & Roadmap
+
+- Bronze is not yet immutable (#13)
+- Validation covers timestamps and basic value ranges only (#14)
+- Tests cover ingestion and validation; the PostgreSQL loader is not tested yet (#12, #17)
+- No CI yet (#22); PostgreSQL connection settings are partly hardcoded (#21)
+
 ## License
 
 MIT License
@@ -150,5 +159,4 @@ MIT License
 ## Acknowledgments
 
 - Air quality data: [OpenAQ](https://openaq.org)
-- Citizen sensors: AirGradient network
-- Government data: Polish Chief Inspectorate for Environmental Protection
+
